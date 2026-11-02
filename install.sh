@@ -139,6 +139,10 @@ term_margin_gradient: 16
 
 term_palette: 080b12;ef4444;10b981;f59e0b;3b82f6;8b5cf6;06b6d4;cbd5e1
 term_palette_bright: 475569;f87171;34d399;fbbf24;60a5fa;a78bfa;22d3ee;ffffff
+
+term_font: boot():/limine/themes/parslinux/parslinux.f16
+term_font_size: 8x16
+term_font_scale: 1x1
 ### END PARSLINUX LIMINE THEME ###
 
 EOF

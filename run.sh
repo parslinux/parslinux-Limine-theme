@@ -33,7 +33,7 @@ function check_theme_integrity() {
 
     # 1. Ana dosya kontrolleri
     echo -e "${BOLD}Temel Dosyalar:${NC}"
-    for f in "background.png" "theme.conf" "limine_sample.conf"; do
+    for f in "background.png" "theme.conf" "limine_sample.conf" "parslinux.f16"; do
         if [ -f "$THEME_DIR/$f" ]; then
             echo -e "  ${GREEN}✓${NC} $f $(ls -lh "$THEME_DIR/$f" | awk '{print "(" $5 ")"}')"
         else
