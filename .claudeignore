@@ -1,0 +1,34 @@
+# Git
+.git/
+.gitignore
+
+# Debian Packaging Artifacts & Builds
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/parslinux-limine-theme/
+debian/*.substvars
+debian/*.debhelper.log
+build/
+*.deb
+*.build
+*.buildinfo
+*.changes
+*.upload
+*.tar.gz
+*.tar.xz
+*.dsc
+
+# Temporary files & Caches
+__pycache__/
+*.py[cod]
+*~
+*.swp
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDE & Editor Files
+.idea/
+.vscode/

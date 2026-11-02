@@ -1,0 +1,32 @@
+name: Build and Validate Package
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y debhelper debhelper-compat dpkg-dev
+
+    - name: Build Debian package
+      run: |
+        chmod +x package.sh
+        ./package.sh
+
+    - name: Upload Debian Package Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: parslinux-limine-theme-deb
+        path: build/*.deb
