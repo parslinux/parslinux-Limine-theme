@@ -107,13 +107,95 @@ EOF
 }
 
 function run_qemu_test() {
-    echo -e "\n${BOLD}[QEMU Test Ortamı Kontrol Ediliyor...]${NC}"
+    echo -e "\n${BOLD}[QEMU Canlı Önyükleme Testi Başlatılıyor...]${NC}\n"
     if ! command -v qemu-system-x86_64 &>/dev/null; then
-        echo -e "${YELLOW}UYARI:${NC} 'qemu-system-x86_64' bulunamadı. Canlı QEMU testi için qemu-system-x86 kurulmalıdır."
+        echo -e "${RED}HATA:${NC} 'qemu-system-x86_64' sistemde bulunamadı."
+        return
+    fi
+    if ! command -v xorriso &>/dev/null; then
+        echo -e "${RED}HATA:${NC} 'xorriso' sistemde bulunamadı."
         return
     fi
 
-    echo -e "${CYAN}QEMU test parametreleri hazırlandı. Canlı önizleme için ISO veya EFI Limine yapısı gerekiyor.${NC}"
+    local iso_file="${SCRIPT_DIR}/build/limine-test.iso"
+    echo -e "  ${CYAN}[1/2] Test ISO imajı hazırlanıyor...${NC}"
+
+    local test_dir
+    test_dir=$(mktemp -d)
+    local iso_root="${test_dir}/iso_root"
+    mkdir -p "${iso_root}/limine/themes/parslinux" "${iso_root}/EFI/BOOT"
+
+    cp "${SCRIPT_DIR}/parslinux/background.png" "${iso_root}/limine/themes/parslinux/"
+    cp "${SCRIPT_DIR}/parslinux/parslinux.f16" "${iso_root}/limine/themes/parslinux/"
+    [ -f /usr/share/limine/limine-bios-cd.bin ] && cp /usr/share/limine/limine-bios-cd.bin "${iso_root}/limine/"
+    [ -f /usr/share/limine/limine-bios.sys ] && cp /usr/share/limine/limine-bios.sys "${iso_root}/limine/"
+    [ -f /usr/share/limine/limine-uefi-cd.bin ] && cp /usr/share/limine/limine-uefi-cd.bin "${iso_root}/limine/"
+    [ -f /usr/share/limine/BOOTX64.EFI ] && cp /usr/share/limine/BOOTX64.EFI "${iso_root}/EFI/BOOT/"
+
+    cat << 'EOF' > "${iso_root}/limine.conf"
+timeout: 10
+default_entry: 1
+interface_resolution: 1920x1080
+interface_branding: ParsLinux GNU/Linux (QEMU Canlı Test)
+interface_branding_color: 6
+interface_help_hidden: no
+
+wallpaper: boot():/limine/themes/parslinux/background.png
+wallpaper_style: stretched
+backdrop: 080b12
+
+term_background: 99080b12
+term_foreground: ffffff
+term_background_bright: 80161b26
+term_foreground_bright: 38bdf8
+term_margin: 96
+term_margin_gradient: 16
+
+term_palette: 080b12;ef4444;10b981;f59e0b;3b82f6;8b5cf6;06b6d4;cbd5e1
+term_palette_bright: 475569;f87171;34d399;fbbf24;60a5fa;a78bfa;22d3ee;ffffff
+
+term_font: boot():/limine/themes/parslinux/parslinux.f16
+term_font_size: 8x16
+term_font_scale: 1x1
+
+/ParsLinux GNU/Linux 6.1 (Canlı Test)
+    comment: ParsLinux Limine Teması Test Menüsü
+    protocol: efi
+
+/ParsLinux Kurtarma Kipi
+    comment: Tek Kullanıcı Kurtarma Kipi
+    protocol: efi
+
+/UEFI Donanım Ayarları
+    comment: Anakart BIOS / UEFI Arayüzü
+    protocol: efi
+EOF
+
+    mkdir -p "${SCRIPT_DIR}/build"
+    xorriso -as mkisofs -b limine/limine-bios-cd.bin \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            --efi-boot limine/limine-uefi-cd.bin \
+            -efi-boot-part --efi-boot-image --protective-msdos-label \
+            "${iso_root}" -o "${iso_file}" >/dev/null 2>&1
+
+    if command -v limine &>/dev/null; then
+        limine bios-install "${iso_file}" >/dev/null 2>&1 || true
+    fi
+    rm -rf "${test_dir}"
+    echo -e "  ${GREEN}✓${NC} Test ISO oluşturuldu: ${iso_file} ($(ls -lh "${iso_file}" | awk '{print $5}'))"
+
+    echo -e "\n  ${CYAN}[2/2] QEMU Sanal Makinesi Başlatılıyor...${NC}"
+    echo -e "  ${YELLOW}Bilgi:${NC} QEMU penceresini kapatmak için pencereyi kapatın veya 'Ctrl+Alt+G' kullanın.\n"
+    
+    local qemu_opts=(-cdrom "${iso_file}" -m 1024 -vga std)
+    [ -w /dev/kvm ] && qemu_opts+=(-enable-kvm)
+
+    if [ -n "$DISPLAY" ] || [ -n "$WAYLAND_DISPLAY" ]; then
+        qemu-system-x86_64 "${qemu_opts[@]}"
+    else
+        echo -e "  ${YELLOW}Grafik ekranı bulunamadı, konsol ekran görüntüsü testi yapılıyor...${NC}"
+        qemu-system-x86_64 "${qemu_opts[@]}" -display none -monitor stdio
+    fi
 }
 
 function show_menu() {
@@ -125,7 +207,7 @@ function show_menu() {
     echo -e "  ${CYAN}4)${NC} Temayı Sistemden Kaldır (uninstall.sh)"
     echo -e "  ${CYAN}5)${NC} Debian Paketi ve Arşiv Oluştur (package.sh)"
     echo -e "  ${CYAN}6)${NC} update-limine ile Yapılandırmayı Yenile"
-    echo -e "  ${CYAN}7)${NC} QEMU Test Kontrolü"
+    echo -e "  ${CYAN}7)${NC} QEMU Canlı Önyükleme Testi (ISO + QEMU)"
     echo -e "  ${CYAN}0)${NC} Çıkış\n"
     read -rp "Seçiminiz [0-7]: " choice
 
@@ -161,8 +243,12 @@ case "$1" in
     --package|-b)
         ./package.sh
         ;;
+    --test|--qemu|-t)
+        print_banner
+        run_qemu_test
+        ;;
     --help|-h)
-        echo "Kullanım: $0 [--check | --preview | --install | --uninstall | --package | --help]"
+        echo "Kullanım: $0 [--check | --preview | --install | --uninstall | --package | --test | --help]"
         ;;
     *)
         show_menu
