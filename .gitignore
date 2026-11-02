@@ -1,0 +1,7 @@
+build/
+*.deb
+*.tar.gz
+*.bak.*
+.DS_Store
+*.swp
+*~

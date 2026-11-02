@@ -1,0 +1,17 @@
+Source: parslinux-limine-theme
+Section: utils
+Priority: optional
+Maintainer: ParsLinux Dev Team <dev@parslinux.org>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Homepage: https://github.com/parslinux/parslinux-limine-theme
+
+Package: parslinux-limine-theme
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: limine
+Provides: limine-theme
+Description: ParsLinux Limine Theme
+ A modern, sleek and elegant Limine bootloader theme featuring the
+ ParsLinux Anatolian leopard branding, high-contrast cyber-dark aesthetic,
+ custom terminal color palette, and high-definition wallpaper.

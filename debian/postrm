@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    purge|remove)
+        rm -rf /boot/limine/themes/parslinux 2>/dev/null || true
+        rm -rf /boot/efi/limine/themes/parslinux 2>/dev/null || true
+        rm -rf /usr/share/limine/themes/parslinux 2>/dev/null || true
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

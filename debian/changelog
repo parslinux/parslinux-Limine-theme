@@ -1,0 +1,8 @@
+parslinux-limine-theme (1.0.0) unstable; urgency=medium
+
+  * Initial release for ParsLinux operating system.
+  * Modern dark aesthetic theme designed for Limine Bootloader.
+  * 1920x1080 Full HD wallpaper with ParsLinux Anatolian leopard branding.
+  * High-contrast semi-transparent terminal palette and margin styling.
+
+ -- ParsLinux Dev Team <dev@parslinux.org>  Mon, 02 Nov 2026 23:30:00 +0300
