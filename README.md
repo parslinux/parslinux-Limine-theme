@@ -169,3 +169,4 @@ parslinux-Limine-theme/
 
 Bu proje **GNU General Public License v3.0 (GPL-3.0)** kapsamında lisanslanmıştır.  
 Telif Hakkı (C) 2026 ParsLinux Geliştirici Ekibi &lt;dev@parslinux.org&gt;.
+# parslinux-Limine-theme
