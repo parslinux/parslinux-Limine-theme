@@ -150,7 +150,7 @@ for kpath in "${KERNEL_LIST[@]}"; do
 
     if [ "$is_first" = true ]; then
         cat << EOF >> "$TMP_CONF"
-/ParsLinux GNU/Linux (${kver})
+/[ 🐆 ] ParsLinux GNU/Linux (${kver})
     comment: ParsLinux GNU/Linux varsayılan çekirdek ile başlat
     protocol: linux
     kernel_path: ${k_boot_path}
@@ -163,7 +163,7 @@ EOF
 
         # Kurtarma kipi
         cat << EOF >> "$TMP_CONF"
-/ParsLinux GNU/Linux (${kver} - Kurtarma Kipi)
+/[ ⚙️ ] ParsLinux GNU/Linux (${kver} - Kurtarma Kipi)
     comment: Sistem kurtarma ve bakım kipi (tek kullanıcı)
     protocol: linux
     kernel_path: ${k_boot_path}
@@ -177,7 +177,7 @@ EOF
         is_first=false
     else
         cat << EOF >> "$TMP_CONF"
-/ParsLinux (${kver})
+/[ 🐧 ] ParsLinux (${kver})
     comment: Eski çekirdek sürümü ile başlat
     protocol: linux
     kernel_path: ${k_boot_path}
@@ -193,7 +193,7 @@ done
 # Eğer hiç kernel bulunamadıysa jenerik fallback ekle
 if [ "$is_first" = true ]; then
     cat << EOF >> "$TMP_CONF"
-/ParsLinux GNU/Linux
+/[ 🐆 ] ParsLinux GNU/Linux
     comment: ParsLinux GNU/Linux Başlat
     protocol: linux
     kernel_path: boot():/vmlinuz
@@ -213,7 +213,7 @@ for win_efi in "${WIN_EFI_CANDIDATES[@]}"; do
     if [ -f "$win_efi" ]; then
         echo -e "Found Windows Boot Manager on ${win_efi}"
         cat << EOF >> "$TMP_CONF"
-/Windows Boot Manager
+/[ 🪟 ] Windows Boot Manager
     comment: Microsoft Windows İşletim Sistemini Başlat
     protocol: efi
     image_path: boot():/EFI/Microsoft/Boot/bootmgfw.efi
@@ -227,7 +227,7 @@ done
 if [ -d "/sys/firmware/efi" ]; then
     echo -e "Adding boot menu entry for UEFI Firmware Settings ..."
     cat << EOF >> "$TMP_CONF"
-/UEFI Donanım Yazılımı Ayarları
+/[ 🔧 ] UEFI Donanım Yazılımı Ayarları
     comment: Anakart BIOS / UEFI Kurulum Ekranına Git
     protocol: efi
 

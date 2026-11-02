@@ -32,10 +32,10 @@ function check_theme_integrity() {
     local errors=0
 
     # 1. Ana dosya kontrolleri
-    echo -e "${BOLD}Temel Dosyalar:${NC}"
-    for f in "background.png" "theme.conf" "limine_sample.conf" "parslinux.f16"; do
-        if [ -f "$THEME_DIR/$f" ]; then
-            echo -e "  ${GREEN}✓${NC} $f $(ls -lh "$THEME_DIR/$f" | awk '{print "(" $5 ")"}')"
+    echo -e "${BOLD}Temel Dosyalar ve Dizinler:${NC}"
+    for f in "background.png" "theme.conf" "limine_sample.conf" "parslinux.f16" "icons" "logo"; do
+        if [ -e "$THEME_DIR/$f" ]; then
+            echo -e "  ${GREEN}✓${NC} $f $(ls -ld "$THEME_DIR/$f" | awk '{print "(" $5 ")"}')"
         else
             echo -e "  ${RED}✗ EKSİK:${NC} $f"
             errors=$((errors + 1))
