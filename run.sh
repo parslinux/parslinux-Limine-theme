@@ -42,6 +42,17 @@ function check_theme_integrity() {
         fi
     done
 
+    # Araç ve Kanca Kontrolleri
+    echo -e "\n${BOLD}Sistem Araçları ve Kancalar:${NC}"
+    for tool in "bin/update-limine" "etc/default/limine" "etc/kernel/postinst.d/zz-update-limine" "etc/kernel/postrm.d/zz-update-limine"; do
+        if [ -f "$SCRIPT_DIR/$tool" ]; then
+            echo -e "  ${GREEN}✓${NC} $tool"
+        else
+            echo -e "  ${RED}✗ EKSİK:${NC} $tool"
+            errors=$((errors + 1))
+        fi
+    done
+
     # 2. Arka plan çözünürlük kontrolü
     if command -v file &>/dev/null && [ -f "$THEME_DIR/background.png" ]; then
         echo -e "\n${BOLD}Görsel Özellikleri:${NC}"
@@ -63,7 +74,7 @@ function check_theme_integrity() {
 
     echo ""
     if [ $errors -eq 0 ]; then
-        echo -e "${GREEN}${BOLD}Tüm kontroller başarıyla tamamlandı. Tema kullanıma hazır!${NC}\n"
+        echo -e "${GREEN}${BOLD}Tüm kontroller başarıyla tamamlandı. Tema ve araçlar kullanıma hazır!${NC}\n"
     else
         echo -e "${RED}${BOLD}Toplam $errors hata tespit edildi. Lütfen eksik dosyaları giderin.${NC}\n"
     fi
@@ -108,14 +119,15 @@ function run_qemu_test() {
 function show_menu() {
     print_banner
     echo -e "${BOLD}Lütfen bir işlem seçin:${NC}\n"
-    echo -e "  ${CYAN}1)${NC} Tema Bütünlüğü ve Sözdizimi Kontrolü"
+    echo -e "  ${CYAN}1)${NC} Tema ve Araç Bütünlüğü Kontrolü"
     echo -e "  ${CYAN}2)${NC} Limine Terminal ASCII Önizlemesini Göster"
     echo -e "  ${CYAN}3)${NC} Temayı Sisteme Kur (install.sh)"
     echo -e "  ${CYAN}4)${NC} Temayı Sistemden Kaldır (uninstall.sh)"
     echo -e "  ${CYAN}5)${NC} Debian Paketi ve Arşiv Oluştur (package.sh)"
-    echo -e "  ${CYAN}6)${NC} QEMU Test Kontrolü"
+    echo -e "  ${CYAN}6)${NC} update-limine ile Yapılandırmayı Yenile"
+    echo -e "  ${CYAN}7)${NC} QEMU Test Kontrolü"
     echo -e "  ${CYAN}0)${NC} Çıkış\n"
-    read -rp "Seçiminiz [0-6]: " choice
+    read -rp "Seçiminiz [0-7]: " choice
 
     case "$choice" in
         1) check_theme_integrity ;;
@@ -123,7 +135,8 @@ function show_menu() {
         3) sudo ./install.sh ;;
         4) sudo ./uninstall.sh ;;
         5) ./package.sh ;;
-        6) run_qemu_test ;;
+        6) sudo ./bin/update-limine ;;
+        7) run_qemu_test ;;
         0) exit 0 ;;
         *) echo -e "${RED}Geçersiz seçim!${NC}" ;;
     esac

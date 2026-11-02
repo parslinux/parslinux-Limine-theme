@@ -1,0 +1,25 @@
+# ==============================================================================
+#  ParsLinux Limine Bootloader Yapılandırması (/etc/default/limine)
+#  Telif Hakkı (C) 2026 ParsLinux Geliştirici Ekibi <dev@parslinux.org>
+# ==============================================================================
+
+# Otomatik başlatma zaman aşımı süresi (saniye)
+LIMINE_TIMEOUT=5
+
+# Varsayılan başlatılacak girdi indeksi (1-tabanlı)
+LIMINE_DEFAULT_ENTRY=1
+
+# Grafik arayüz modu (yes / no)
+LIMINE_GRAPHICS=yes
+
+# Ekran çözünürlüğü (1920x1080 veya otomatik için auto)
+LIMINE_RESOLUTION="1920x1080"
+
+# Üst bilgi / Markalama başlığı
+LIMINE_BRANDING="ParsLinux GNU/Linux"
+
+# Çekirdek başlangıç komut satırı parametreleri
+LIMINE_CMDLINE_DEFAULT="quiet splash"
+
+# Tema dizini
+LIMINE_THEME_DIR="/boot/limine/themes/parslinux"

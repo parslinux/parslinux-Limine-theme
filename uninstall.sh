@@ -28,7 +28,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo -e "${BOLD}[1/2] Tema dosyaları temizleniyor...${NC}"
+echo -e "${BOLD}[1/3] Tema dosyaları temizleniyor...${NC}"
 rm -rf "/boot/limine/themes/${THEME_NAME}"
 rm -rf "/boot/efi/themes/${THEME_NAME}"
 rm -rf "/boot/efi/limine/themes/${THEME_NAME}"
@@ -36,7 +36,14 @@ rm -rf "/boot/EFI/limine/themes/${THEME_NAME}"
 rm -rf "/usr/share/limine/themes/${THEME_NAME}"
 echo -e "  ${GREEN}✓${NC} Sistemdeki ${THEME_NAME} tema klasörleri kaldırıldı."
 
-echo -e "\n${BOLD}[2/2] Limine yapılandırma dosyaları temizleniyor...${NC}"
+echo -e "\n${BOLD}[2/3] Araçlar ve kancalar temizleniyor...${NC}"
+rm -f /usr/sbin/update-limine
+rm -f /etc/default/limine
+rm -f /etc/kernel/postinst.d/zz-update-limine
+rm -f /etc/kernel/postrm.d/zz-update-limine
+echo -e "  ${GREEN}✓${NC} update-limine ve çekirdek kancaları kaldırıldı."
+
+echo -e "\n${BOLD}[3/3] Limine yapılandırma dosyaları temizleniyor...${NC}"
 CANDIDATE_CONFIGS=(
     "/boot/limine.conf"
     "/boot/limine/limine.conf"

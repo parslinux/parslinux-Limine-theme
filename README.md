@@ -114,15 +114,30 @@ term_palette_bright: 475569;f87171;34d399;fbbf24;60a5fa;a78bfa;22d3ee;ffffff
 
 ---
 
+## ⚡ `update-limine` Aracı ve Çekirdek Kancaları
+
+ParsLinux Limine Teması, GRUB'daki `update-grub` benzeri tam otomatik bir yapılandırma üretici içerir:
+
+* **`/usr/sbin/update-limine`**: `/boot` altındaki çekirdekleri (`vmlinuz-*`), ramdisk imajlarını (`initrd.img-*`), Windows Boot Manager ve UEFI ayarlarını tarar, temayı uygulayarak `limine.conf` dosyasını otomatik üretir.
+* **`/etc/default/limine`**: Zaman aşımı süresi, çözünürlük, varsayılan girdi ve çekirdek parametrelerini merkezi olarak yapılandırmanızı sağlar.
+* **`/etc/kernel/postinst.d/zz-update-limine`**: Sistemde yeni bir Linux çekirdeği kurulduğunda veya güncellendiğinde menüyü otomatik olarak günceller.
+
+```bash
+# Yapılandırmayı elle yenilemek için:
+sudo update-limine
+```
+
+---
+
 ## 🛠️ Yönetim ve Test Aracı (`run.sh`)
 
 Tema bütünlüğünü test etmek, önizleme görüntülemek veya işlem yapmak için `run.sh` aracını kullanabilirsiniz:
 
 ```bash
-# Etkileşimli menüyü açar:
+# Etkileşimli yönetim menüsünü açar:
 ./run.sh
 
-# Tema dosyalarını ve direktifleri doğrular:
+# Tema dosyalarını, araçları ve direktifleri doğrular:
 ./run.sh --check
 
 # Terminal ASCII önizlemesini görüntüler:
@@ -136,7 +151,7 @@ Tema bütünlüğünü test etmek, önizleme görüntülemek veya işlem yapmak 
 
 ## 🗑️ Temayı Kaldırma
 
-Temayı sistemden tamamen temizlemek ve orijinal yapılandırmanızı geri yüklemek için:
+Temayı ve kancaları sistemden tamamen temizlemek için:
 
 ```bash
 sudo ./uninstall.sh
@@ -148,8 +163,14 @@ sudo ./uninstall.sh
 
 ```text
 parslinux-Limine-theme/
+├── bin/                       # Sistem yürütülebilir araçları
+│   └── update-limine          # limine.conf otomatik üretim aracı (update-grub dengi)
+├── etc/                       # Yapılandırma ve kancalar
+│   ├── default/limine         # Merkezi Limine seçenekleri (timeout, cmdline vb.)
+│   └── kernel/post*.d/        # Çekirdek güncelleme kancaları (zz-update-limine)
 ├── parslinux/                 # Limine tema çekirdeği
 │   ├── background.png         # 1920x1080 Full HD ParsLinux duvar kağıdı
+│   ├── parslinux.f16          # 4096 baytlık ham CP437 konsol yazı tipi (8x16)
 │   ├── theme.conf             # Tema konfigürasyon direktifleri
 │   └── limine_sample.conf     # Örnek hazır limine.conf dosyası
 ├── debian/                    # Debian paketleme dosyaları
@@ -169,4 +190,3 @@ parslinux-Limine-theme/
 
 Bu proje **GNU General Public License v3.0 (GPL-3.0)** kapsamında lisanslanmıştır.  
 Telif Hakkı (C) 2026 ParsLinux Geliştirici Ekibi &lt;dev@parslinux.org&gt;.
-# parslinux-Limine-theme

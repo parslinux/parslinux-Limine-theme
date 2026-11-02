@@ -1,0 +1,242 @@
+#!/usr/bin/env bash
+# ==============================================================================
+#  update-limine — ParsLinux Limine Yapılandırma Üretim Aracı
+#  Telif Hakkı (C) 2026 ParsLinux Geliştirici Ekibi <dev@parslinux.org>
+# ==============================================================================
+
+set -e
+
+# Renk tanımları
+CYAN='\033[0;36m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+if [ "$EUID" -ne 0 ]; then
+    echo -e "${RED}HATA:${NC} Bu komut root hakları ile çalıştırılmalıdır (sudo update-limine)." >&2
+    exit 1
+fi
+
+echo -e "Generating limine configuration file ..."
+
+# 1. Varsayılan ayarları yükle
+LIMINE_TIMEOUT=5
+LIMINE_DEFAULT_ENTRY=1
+LIMINE_GRAPHICS="yes"
+LIMINE_RESOLUTION="1920x1080"
+LIMINE_BRANDING="ParsLinux GNU/Linux"
+LIMINE_CMDLINE_DEFAULT="quiet splash"
+LIMINE_THEME_DIR="/boot/limine/themes/parslinux"
+
+if [ -f "/etc/default/limine" ]; then
+    # shellcheck source=/dev/null
+    source "/etc/default/limine"
+fi
+
+# 2. Hedef limine.conf dosyasını belirle
+TARGET_CONF=""
+for c in "/boot/limine.conf" "/boot/limine/limine.conf" "/boot/efi/limine.conf" "/boot/efi/limine/limine.conf" "/boot/efi/EFI/limine/limine.conf"; do
+    if [ -f "$c" ]; then
+        TARGET_CONF="$c"
+        break
+    fi
+done
+
+if [ -z "$TARGET_CONF" ]; then
+    if [ -d "/boot/efi" ]; then
+        TARGET_CONF="/boot/efi/limine.conf"
+    else
+        TARGET_CONF="/boot/limine.conf"
+    fi
+fi
+
+mkdir -p "$(dirname "$TARGET_CONF")"
+
+# 3. Kök dizin (Root) ve Boot bölümü tespiti
+ROOT_UUID=""
+if command -v findmnt &>/dev/null; then
+    ROOT_UUID=$(findmnt -n -o UUID / 2>/dev/null || true)
+fi
+
+ROOT_PARAM=""
+if [ -n "$ROOT_UUID" ]; then
+    ROOT_PARAM="root=UUID=${ROOT_UUID}"
+fi
+
+# /boot ayrı bir bölüm mü?
+BOOT_PREFIX=""
+if mountpoint -q /boot 2>/dev/null; then
+    BOOT_PREFIX=""
+else
+    BOOT_PREFIX="/boot"
+fi
+
+# 4. Geçici dosya oluştur ve yazmaya başla
+TMP_CONF=$(mktemp)
+
+cat << EOF > "$TMP_CONF"
+# ==============================================================================
+#  Otomatik oluşturulmuş Limine Yapılandırma Dosyası (update-limine)
+#  Tarih: $(date "+%Y-%m-%d %H:%M:%S")
+# ==============================================================================
+
+timeout: ${LIMINE_TIMEOUT}
+default_entry: ${LIMINE_DEFAULT_ENTRY}
+quiet: no
+graphics: ${LIMINE_GRAPHICS}
+
+### === PARSLINUX LIMINE THEME SETTINGS (BAŞLANGIÇ) ===
+interface_resolution: ${LIMINE_RESOLUTION}
+interface_branding: ${LIMINE_BRANDING}
+interface_branding_color: 6
+interface_help_hidden: no
+
+wallpaper: boot():/limine/themes/parslinux/background.png
+wallpaper_style: stretched
+backdrop: 080b12
+
+term_background: 99080b12
+term_foreground: ffffff
+term_background_bright: 80161b26
+term_foreground_bright: 38bdf8
+term_margin: 96
+term_margin_gradient: 16
+
+term_palette: 080b12;ef4444;10b981;f59e0b;3b82f6;8b5cf6;06b6d4;cbd5e1
+term_palette_bright: 475569;f87171;34d399;fbbf24;60a5fa;a78bfa;22d3ee;ffffff
+
+term_font: boot():/limine/themes/parslinux/parslinux.f16
+term_font_size: 8x16
+term_font_scale: 1x1
+### === PARSLINUX LIMINE THEME SETTINGS (BİTİŞ) ===
+
+EOF
+
+if [ -f "${LIMINE_THEME_DIR}/background.png" ]; then
+    echo -e "Found theme: ${LIMINE_THEME_DIR}"
+fi
+
+# 5. /boot altındaki çekirdekleri tara (en yeni sürümden eskiye doğru sırala)
+KERNEL_LIST=()
+if [ -d "/boot" ]; then
+    while IFS= read -r k; do
+        [ -n "$k" ] && KERNEL_LIST+=("$k")
+    done < <(find /boot -maxdepth 1 -name "vmlinuz-*" -type f | sort -V -r)
+fi
+
+is_first=true
+for kpath in "${KERNEL_LIST[@]}"; do
+    kfile=$(basename "$kpath")
+    kver="${kfile#vmlinuz-}"
+    
+    # Eşleşen initrd bul
+    initrd_path="/boot/initrd.img-${kver}"
+    if [ ! -f "$initrd_path" ]; then
+        initrd_path="/boot/initramfs-${kver}.img"
+    fi
+
+    echo -e "Found linux image: ${kpath}"
+    
+    k_boot_path="boot():${BOOT_PREFIX}/${kfile}"
+    initrd_boot_path=""
+    if [ -f "$initrd_path" ]; then
+        echo -e "Found initrd image: ${initrd_path}"
+        initrd_boot_path="boot():${BOOT_PREFIX}/$(basename "$initrd_path")"
+    fi
+
+    CMDLINE="${ROOT_PARAM} ${LIMINE_CMDLINE_DEFAULT} ro"
+
+    if [ "$is_first" = true ]; then
+        cat << EOF >> "$TMP_CONF"
+/ParsLinux GNU/Linux (${kver})
+    comment: ParsLinux GNU/Linux varsayılan çekirdek ile başlat
+    protocol: linux
+    kernel_path: ${k_boot_path}
+EOF
+        if [ -n "$initrd_boot_path" ]; then
+            echo "    module_path: ${initrd_boot_path}" >> "$TMP_CONF"
+        fi
+        echo "    kernel_cmdline: ${CMDLINE}" >> "$TMP_CONF"
+        echo "" >> "$TMP_CONF"
+
+        # Kurtarma kipi
+        cat << EOF >> "$TMP_CONF"
+/ParsLinux GNU/Linux (${kver} - Kurtarma Kipi)
+    comment: Sistem kurtarma ve bakım kipi (tek kullanıcı)
+    protocol: linux
+    kernel_path: ${k_boot_path}
+EOF
+        if [ -n "$initrd_boot_path" ]; then
+            echo "    module_path: ${initrd_boot_path}" >> "$TMP_CONF"
+        fi
+        echo "    kernel_cmdline: ${ROOT_PARAM} single ro" >> "$TMP_CONF"
+        echo "" >> "$TMP_CONF"
+
+        is_first=false
+    else
+        cat << EOF >> "$TMP_CONF"
+/ParsLinux (${kver})
+    comment: Eski çekirdek sürümü ile başlat
+    protocol: linux
+    kernel_path: ${k_boot_path}
+EOF
+        if [ -n "$initrd_boot_path" ]; then
+            echo "    module_path: ${initrd_boot_path}" >> "$TMP_CONF"
+        fi
+        echo "    kernel_cmdline: ${CMDLINE}" >> "$TMP_CONF"
+        echo "" >> "$TMP_CONF"
+    fi
+done
+
+# Eğer hiç kernel bulunamadıysa jenerik fallback ekle
+if [ "$is_first" = true ]; then
+    cat << EOF >> "$TMP_CONF"
+/ParsLinux GNU/Linux
+    comment: ParsLinux GNU/Linux Başlat
+    protocol: linux
+    kernel_path: boot():/vmlinuz
+    module_path: boot():/initrd.img
+    kernel_cmdline: ${LIMINE_CMDLINE_DEFAULT}
+
+EOF
+fi
+
+# 6. Windows Boot Manager Taraması
+WIN_EFI_CANDIDATES=(
+    "/boot/efi/EFI/Microsoft/Boot/bootmgfw.efi"
+    "/boot/EFI/Microsoft/Boot/bootmgfw.efi"
+)
+
+for win_efi in "${WIN_EFI_CANDIDATES[@]}"; do
+    if [ -f "$win_efi" ]; then
+        echo -e "Found Windows Boot Manager on ${win_efi}"
+        cat << EOF >> "$TMP_CONF"
+/Windows Boot Manager
+    comment: Microsoft Windows İşletim Sistemini Başlat
+    protocol: efi
+    image_path: boot():/EFI/Microsoft/Boot/bootmgfw.efi
+
+EOF
+        break
+    fi
+done
+
+# 7. UEFI Donanım Ayarları (UEFI sistemlerde)
+if [ -d "/sys/firmware/efi" ]; then
+    echo -e "Adding boot menu entry for UEFI Firmware Settings ..."
+    cat << EOF >> "$TMP_CONF"
+/UEFI Donanım Yazılımı Ayarları
+    comment: Anakart BIOS / UEFI Kurulum Ekranına Git
+    protocol: efi
+
+EOF
+fi
+
+# Dosyayı hedefe taşı
+cp "$TMP_CONF" "$TARGET_CONF"
+rm -f "$TMP_CONF"
+
+echo -e "done. (${TARGET_CONF} güncellendi)"
+exit 0

@@ -51,9 +51,20 @@ else
     mkdir -p "${STAGE_DIR}/usr/share/limine/themes"
     mkdir -p "${STAGE_DIR}/boot/limine/themes"
 
+    mkdir -p "${STAGE_DIR}/usr/sbin"
+    mkdir -p "${STAGE_DIR}/etc/default"
+    mkdir -p "${STAGE_DIR}/etc/kernel/postinst.d"
+    mkdir -p "${STAGE_DIR}/etc/kernel/postrm.d"
+
     # Tema dosyalarını kopyala
     cp -r parslinux "${STAGE_DIR}/usr/share/limine/themes/"
     cp -r parslinux "${STAGE_DIR}/boot/limine/themes/"
+
+    # update-limine ve sistem kancalarını kopyala
+    [ -f bin/update-limine ] && cp bin/update-limine "${STAGE_DIR}/usr/sbin/update-limine" && chmod 755 "${STAGE_DIR}/usr/sbin/update-limine"
+    [ -f etc/default/limine ] && cp etc/default/limine "${STAGE_DIR}/etc/default/limine" && chmod 644 "${STAGE_DIR}/etc/default/limine"
+    [ -f etc/kernel/postinst.d/zz-update-limine ] && cp etc/kernel/postinst.d/zz-update-limine "${STAGE_DIR}/etc/kernel/postinst.d/zz-update-limine" && chmod 755 "${STAGE_DIR}/etc/kernel/postinst.d/zz-update-limine"
+    [ -f etc/kernel/postrm.d/zz-update-limine ] && cp etc/kernel/postrm.d/zz-update-limine "${STAGE_DIR}/etc/kernel/postrm.d/zz-update-limine" && chmod 755 "${STAGE_DIR}/etc/kernel/postrm.d/zz-update-limine"
 
     # Bakımcı betiklerini hazırla
     cp debian/postinst "${STAGE_DIR}/DEBIAN/postinst"
@@ -90,7 +101,7 @@ EOF
         (cd "${STAGE_DIR}/DEBIAN" && tar --owner=root:0 --group=root:0 -czf "${WORK_TEMP}/control.tar.gz" .)
 
         # data.tar.gz
-        (cd "${STAGE_DIR}" && tar --exclude='./DEBIAN' --owner=root:0 --group=root:0 -czf "${WORK_TEMP}/data.tar.gz" ./usr ./boot)
+        (cd "${STAGE_DIR}" && tar --exclude='./DEBIAN' --owner=root:0 --group=root:0 -czf "${WORK_TEMP}/data.tar.gz" ./usr ./boot ./etc)
 
         # ar ile .deb birleştir
         (cd "${WORK_TEMP}" && ar rcs "${DEB_FILE}" debian-binary control.tar.gz data.tar.gz)
@@ -105,9 +116,9 @@ fi
 echo -e "\n${BOLD}[2/2] Evrensel Kaynak / Dağıtım Arşivi (.tar.gz) Oluşturuluyor...${NC}"
 TAR_NAME="${PKG_NAME}-${VERSION}.tar.gz"
 tar --exclude='./build' --exclude='./.git' -czf "${OUTPUT_DIR}/${TAR_NAME}" \
-    parslinux install.sh uninstall.sh run.sh package.sh Makefile README.md debian docs screenshots 2>/dev/null || \
+    parslinux bin etc install.sh uninstall.sh run.sh package.sh Makefile README.md debian docs screenshots 2>/dev/null || \
 tar --exclude='./build' --exclude='./.git' -czf "${OUTPUT_DIR}/${TAR_NAME}" \
-    parslinux install.sh uninstall.sh run.sh package.sh Makefile README.md debian
+    parslinux bin etc install.sh uninstall.sh run.sh package.sh Makefile README.md debian
 
 echo -e "  ${GREEN}✓${NC} Evrensel arşiv oluşturuldu: ${TAR_NAME}"
 

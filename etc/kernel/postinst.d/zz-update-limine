@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+# Çekirdek kurulduğunda veya güncellendiğinde Limine yapılandırmasını yenile
+if [ -x /usr/sbin/update-limine ]; then
+    /usr/sbin/update-limine || true
+elif [ -x /usr/bin/update-limine ]; then
+    /usr/bin/update-limine || true
+fi
+
+exit 0

@@ -54,7 +54,6 @@ for cfg in "${CANDIDATE_CONFIGS[@]}"; do
     fi
 done
 
-# Eğer bulunamadıysa varsayılan konumu belirle
 if [ -z "$LIMINE_CONF" ]; then
     if [ -d "/boot/efi" ]; then
         LIMINE_CONF="/boot/efi/limine.conf"
@@ -68,7 +67,7 @@ CONF_DIR="$(dirname "${LIMINE_CONF}")"
 TARGET_THEME_DIR="${CONF_DIR}/themes/${THEME_NAME}"
 USR_SHARE_THEMES="/usr/share/limine/themes/${THEME_NAME}"
 
-echo -e "${BOLD}[1/4] Tema dosyaları kopyalanıyor...${NC}"
+echo -e "${BOLD}[1/5] Tema dosyaları kopyalanıyor...${NC}"
 mkdir -p "${CONF_DIR}/themes"
 mkdir -p "/usr/share/limine/themes"
 
@@ -76,7 +75,7 @@ rm -rf "${TARGET_THEME_DIR}" "${USR_SHARE_THEMES}"
 cp -r "${THEME_SRC}" "${TARGET_THEME_DIR}"
 cp -r "${THEME_SRC}" "${USR_SHARE_THEMES}"
 
-# /boot/limine/themes de her zaman güncel tutulsun
+# /boot/limine/themes her zaman güncel tutulsun
 if [ "${CONF_DIR}" != "/boot/limine" ]; then
     mkdir -p "/boot/limine/themes"
     rm -rf "/boot/limine/themes/${THEME_NAME}"
@@ -86,40 +85,54 @@ fi
 echo -e "  ${GREEN}✓${NC} Önyükleyici tema dizini: ${TARGET_THEME_DIR}"
 echo -e "  ${GREEN}✓${NC} Sistem paylaşılan dizini: ${USR_SHARE_THEMES}"
 
-echo -e "\n${BOLD}[2/4] ${LIMINE_CONF} yapılandırması güncelleniyor...${NC}"
-
-# Yedek al
-if [ -f "${LIMINE_CONF}" ]; then
-    BACKUP_FILE="${LIMINE_CONF}.bak.$(date +%Y%m%d%H%M%S)"
-    cp "${LIMINE_CONF}" "${BACKUP_FILE}"
-    echo -e "  ${GREEN}✓${NC} Yedek oluşturuldu: ${BACKUP_FILE}"
-    
-    # Eski ParsLinux tema bloklarını temizle
-    sed -i '/### BEGIN PARSLINUX LIMINE THEME ###/,/### END PARSLINUX LIMINE THEME ###/d' "${LIMINE_CONF}"
-    # Eski olası bağımsız ayarları temizle
-    sed -i '/^interface_resolution:/d' "${LIMINE_CONF}"
-    sed -i '/^interface_branding:/d' "${LIMINE_CONF}"
-    sed -i '/^interface_branding_color:/d' "${LIMINE_CONF}"
-    sed -i '/^interface_branding_colour:/d' "${LIMINE_CONF}"
-    sed -i '/^interface_help_hidden:/d' "${LIMINE_CONF}"
-    sed -i '/^wallpaper:/d' "${LIMINE_CONF}"
-    sed -i '/^wallpaper_style:/d' "${LIMINE_CONF}"
-    sed -i '/^backdrop:/d' "${LIMINE_CONF}"
-    sed -i '/^term_background:/d' "${LIMINE_CONF}"
-    sed -i '/^term_foreground:/d' "${LIMINE_CONF}"
-    sed -i '/^term_background_bright:/d' "${LIMINE_CONF}"
-    sed -i '/^term_foreground_bright:/d' "${LIMINE_CONF}"
-    sed -i '/^term_margin:/d' "${LIMINE_CONF}"
-    sed -i '/^term_margin_gradient:/d' "${LIMINE_CONF}"
-    sed -i '/^term_palette:/d' "${LIMINE_CONF}"
-    sed -i '/^term_palette_bright:/d' "${LIMINE_CONF}"
-else
-    touch "${LIMINE_CONF}"
+echo -e "\n${BOLD}[2/5] update-limine ve sistem kancaları kuruluyor...${NC}"
+mkdir -p /usr/sbin /etc/default /etc/kernel/postinst.d /etc/kernel/postrm.d
+if [ -f "${SCRIPT_DIR}/bin/update-limine" ]; then
+    install -m 755 "${SCRIPT_DIR}/bin/update-limine" /usr/sbin/update-limine
+    echo -e "  ${GREEN}✓${NC} /usr/sbin/update-limine kuruldu."
 fi
 
-# Tema blok tanımını oluştur
-TEMP_BLOCK=$(mktemp)
-cat << 'EOF' > "${TEMP_BLOCK}"
+if [ -f "${SCRIPT_DIR}/etc/default/limine" ] && [ ! -f /etc/default/limine ]; then
+    install -m 644 "${SCRIPT_DIR}/etc/default/limine" /etc/default/limine
+    echo -e "  ${GREEN}✓${NC} /etc/default/limine oluşturuldu."
+fi
+
+if [ -f "${SCRIPT_DIR}/etc/kernel/postinst.d/zz-update-limine" ]; then
+    install -m 755 "${SCRIPT_DIR}/etc/kernel/postinst.d/zz-update-limine" /etc/kernel/postinst.d/zz-update-limine
+    install -m 755 "${SCRIPT_DIR}/etc/kernel/postrm.d/zz-update-limine" /etc/kernel/postrm.d/zz-update-limine
+    echo -e "  ${GREEN}✓${NC} Çekirdek güncelleme kancaları (/etc/kernel/*.d/zz-update-limine) kuruldu."
+fi
+
+echo -e "\n${BOLD}[3/5] Yapılandırma işleniyor...${NC}"
+# Eğer sistemde çekirdekler varsa update-limine ile tam yapılandırma üret
+if command -v update-limine &>/dev/null && [ -d "/boot" ] && ls /boot/vmlinuz-* &>/dev/null; then
+    echo -e "  ${CYAN}update-limine çalıştırılıyor...${NC}"
+    /usr/sbin/update-limine
+else
+    # Yedek al ve tema bloğunu en başa ekle
+    if [ -f "${LIMINE_CONF}" ]; then
+        BACKUP_FILE="${LIMINE_CONF}.bak.$(date +%Y%m%d%H%M%S)"
+        cp "${LIMINE_CONF}" "${BACKUP_FILE}"
+        echo -e "  ${GREEN}✓${NC} Yedek oluşturuldu: ${BACKUP_FILE}"
+        
+        sed -i '/### BEGIN PARSLINUX LIMINE THEME ###/,/### END PARSLINUX LIMINE THEME ###/d' "${LIMINE_CONF}"
+        sed -i '/^interface_resolution:/d' "${LIMINE_CONF}"
+        sed -i '/^interface_branding:/d' "${LIMINE_CONF}"
+        sed -i '/^interface_branding_color:/d' "${LIMINE_CONF}"
+        sed -i '/^interface_help_hidden:/d' "${LIMINE_CONF}"
+        sed -i '/^wallpaper:/d' "${LIMINE_CONF}"
+        sed -i '/^wallpaper_style:/d' "${LIMINE_CONF}"
+        sed -i '/^backdrop:/d' "${LIMINE_CONF}"
+        sed -i '/^term_background:/d' "${LIMINE_CONF}"
+        sed -i '/^term_foreground:/d' "${LIMINE_CONF}"
+        sed -i '/^term_margin:/d' "${LIMINE_CONF}"
+        sed -i '/^term_palette:/d' "${LIMINE_CONF}"
+    else
+        touch "${LIMINE_CONF}"
+    fi
+
+    TEMP_BLOCK=$(mktemp)
+    cat << 'EOF' > "${TEMP_BLOCK}"
 ### BEGIN PARSLINUX LIMINE THEME ###
 interface_resolution: 1920x1080
 interface_branding: ParsLinux GNU/Linux
@@ -146,39 +159,30 @@ term_font_scale: 1x1
 ### END PARSLINUX LIMINE THEME ###
 
 EOF
-
-# Yeni içeriği limine.conf dosyasının en başına ekle (global ayarlar)
-EXISTING_CONTENT=""
-if [ -s "${LIMINE_CONF}" ]; then
-    EXISTING_CONTENT=$(cat "${LIMINE_CONF}")
+    EXISTING_CONTENT=""
+    [ -s "${LIMINE_CONF}" ] && EXISTING_CONTENT=$(cat "${LIMINE_CONF}")
+    cat "${TEMP_BLOCK}" > "${LIMINE_CONF}"
+    [ -n "${EXISTING_CONTENT}" ] && echo "${EXISTING_CONTENT}" >> "${LIMINE_CONF}"
+    rm -f "${TEMP_BLOCK}"
+    echo -e "  ${GREEN}✓${NC} Tema direktifleri ${LIMINE_CONF} dosyasına uygulandı."
 fi
 
-cat "${TEMP_BLOCK}" > "${LIMINE_CONF}"
-if [ -n "${EXISTING_CONTENT}" ]; then
-    echo "${EXISTING_CONTENT}" >> "${LIMINE_CONF}"
-fi
-rm -f "${TEMP_BLOCK}"
-
-echo -e "  ${GREEN}✓${NC} Tema direktifleri ${LIMINE_CONF} dosyasına uygulandı."
-
-echo -e "\n${BOLD}[3/4] Limine Önyükleyici Varlığı Kontrol Ediliyor...${NC}"
+echo -e "\n${BOLD}[4/5] Limine Önyükleyici Varlığı Kontrol Ediliyor...${NC}"
 if command -v limine &>/dev/null; then
-    echo -e "  ${GREEN}✓${NC} Limine yardımcı komutu tespit edildi ($(limine --version 2>/dev/null || echo 'hazır'))."
+    echo -e "  ${GREEN}✓${NC} Limine yardımcı ikili dosyası hazır ($(limine --version 2>/dev/null || echo 'hazır'))."
 else
-    echo -e "  ${CYAN}•${NC} Limine ikili dosyası sistem yolunda bulunmadı, statik yapılandırma uygulandı."
+    echo -e "  ${CYAN}•${NC} Limine önyükleyici ikilisi sistem PATH'inde aranmadı, yapılandırma ve kancalar tamamlandı."
 fi
 
-echo -e "\n${BOLD}[4/4] Kurulum Doğrulaması:${NC}"
-if [ -f "${TARGET_THEME_DIR}/background.png" ]; then
-    echo -e "  ${GREEN}✓${NC} Tema arka plan görseli doğrulandı: ${TARGET_THEME_DIR}/background.png"
-fi
-if [ -f "${TARGET_THEME_DIR}/theme.conf" ]; then
-    echo -e "  ${GREEN}✓${NC} Tema yapılandırması doğrulandı: ${TARGET_THEME_DIR}/theme.conf"
-fi
+echo -e "\n${BOLD}[5/5] Kurulum Doğrulaması:${NC}"
+[ -f "${TARGET_THEME_DIR}/background.png" ] && echo -e "  ${GREEN}✓${NC} Tema arka planı: ${TARGET_THEME_DIR}/background.png"
+[ -f "${TARGET_THEME_DIR}/parslinux.f16" ] && echo -e "  ${GREEN}✓${NC} Konsol yazı tipi: ${TARGET_THEME_DIR}/parslinux.f16"
+[ -f "/usr/sbin/update-limine" ] && echo -e "  ${GREEN}✓${NC} Otomasyon aracı: /usr/sbin/update-limine"
 
 echo -e "\n${GREEN}${BOLD}╔══════════════════════════════════════════════════════════════╗"
 echo "║         🎉 ParsLinux Limine Teması Başarıyla Kuruldu!        ║"
 echo "╚══════════════════════════════════════════════════════════════╝${NC}"
-echo -e "  ${CYAN}• Tema Konumu  :${NC} ${TARGET_THEME_DIR}"
-echo -e "  ${CYAN}• Yapılandırma :${NC} ${LIMINE_CONF}"
-echo -e "  ${CYAN}• Durum        :${NC} Bir sonraki sistem açılışında aktif olacaktır.\n"
+echo -e "  ${CYAN}• Tema Konumu      :${NC} ${TARGET_THEME_DIR}"
+echo -e "  ${CYAN}• Yapılandırma     :${NC} ${LIMINE_CONF}"
+echo -e "  ${CYAN}• Güncelleme Aracı :${NC} update-limine"
+echo -e "  ${CYAN}• Durum            :${NC} Bir sonraki açılışta veya çekirdek güncellemesinde otomatik aktiftir.\n"
